@@ -1652,7 +1652,7 @@ def check_supervised_y_2d(name, estimator_orig):
         assert_greater(len(w), 0, msg)
         assert_true("DataConversionWarning('A column-vector y"
                     " was passed when a 1d array was expected" in msg)
-    assert_allclose(y_pred.ravel(), y_pred_2d.ravel(), atol=1e-9)
+    assert_allclose(y_pred.ravel(), y_pred_2d.ravel())
 
 
 @ignore_warnings
@@ -1931,7 +1931,7 @@ def check_class_weight_balanced_linear_classifier(name, Classifier):
     classifier.set_params(class_weight=class_weight)
     coef_manual = classifier.fit(X, y).coef_.copy()
 
-    assert_allclose(coef_balanced, coef_manual, atol=1e-9)
+    assert_allclose(coef_balanced, coef_manual)
 
 
 @ignore_warnings(category=(DeprecationWarning, FutureWarning))

@@ -427,28 +427,27 @@ def test_params_errors():
     assert_raises(ValueError, clf(activation='cloak').fit, X, y)
 
 
-# disabled for win32 vc9, due to test failure (no time to debug/fix)
-# def test_predict_proba_binary():
-#     # Test that predict_proba works as expected for binary class.
-#     X = X_digits_binary[:50]
-#     y = y_digits_binary[:50]
+def test_predict_proba_binary():
+    # Test that predict_proba works as expected for binary class.
+    X = X_digits_binary[:50]
+    y = y_digits_binary[:50]
 
-#     clf = MLPClassifier(hidden_layer_sizes=5)
-#     with ignore_warnings(category=ConvergenceWarning):
-#         clf.fit(X, y)
-#     y_proba = clf.predict_proba(X)
-#     y_log_proba = clf.predict_log_proba(X)
+    clf = MLPClassifier(hidden_layer_sizes=5)
+    with ignore_warnings(category=ConvergenceWarning):
+        clf.fit(X, y)
+    y_proba = clf.predict_proba(X)
+    y_log_proba = clf.predict_log_proba(X)
 
-#     (n_samples, n_classes) = y.shape[0], 2
+    (n_samples, n_classes) = y.shape[0], 2
 
-#     proba_max = y_proba.argmax(axis=1)
-#     proba_log_max = y_log_proba.argmax(axis=1)
+    proba_max = y_proba.argmax(axis=1)
+    proba_log_max = y_log_proba.argmax(axis=1)
 
-#     assert_equal(y_proba.shape, (n_samples, n_classes))
-#     assert_array_equal(proba_max, proba_log_max)
-#     assert_array_equal(y_log_proba, np.log(y_proba))
+    assert_equal(y_proba.shape, (n_samples, n_classes))
+    assert_array_equal(proba_max, proba_log_max)
+    assert_array_equal(y_log_proba, np.log(y_proba))
 
-#     assert_equal(roc_auc_score(y, y_proba[:, 1]), 1.0)
+    assert_equal(roc_auc_score(y, y_proba[:, 1]), 1.0)
 
 
 def test_predict_proba_multiclass():
