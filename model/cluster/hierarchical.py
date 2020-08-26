@@ -28,7 +28,7 @@ from ..externals.six.moves import xrange
 
 ###############################################################################
 # For non fully-connected graphs
-
+CLUSSTER_THREHOLD = 0.15
 
 def _fix_connectivity(X, connectivity, affinity):
     """
@@ -442,7 +442,6 @@ def linkage_tree(X, connectivity=None, n_components='deprecated',
 
     if connectivity is None:
         from scipy.cluster import hierarchy     # imports PIL
-
         if n_clusters is not None:
             warnings.warn('Partial build of the tree is implemented '
                           'only for structured clustering (i.e. with '
@@ -469,13 +468,12 @@ def linkage_tree(X, connectivity=None, n_components='deprecated',
             i, j = np.triu_indices(X.shape[0], k=1)
             X = X[i, j]
         out = hierarchy.linkage(X, method=linkage, metric=affinity)
-        children_ = out[:, :2].astype(np.int)
-
+        #children_ = out[:, :2].astype(np.int)
         if return_distance:
             distances = out[:, 2]
             return children_, 1, n_samples, None, distances
-        return children_, 1, n_samples, None
-
+        
+        return out, 1, n_samples, None
     connectivity, n_components = _fix_connectivity(X, connectivity,
                                                    affinity=affinity)
 
@@ -605,7 +603,7 @@ _TREE_BUILDERS = dict(
 ###############################################################################
 # Functions for cutting  hierarchical clustering tree
 
-def _hc_cut(n_clusters, children, n_leaves):
+def _hc_cut(n_clusters, children, n_leaves, distance=None):
     """Function cutting the ward tree for a given number of clusters.
 
     Parameters
@@ -639,8 +637,22 @@ def _hc_cut(n_clusters, children, n_leaves):
     # We use negated indices as heaps work on smallest elements, and we
     # are interested in largest elements
     # children[-1] is the root of the tree
+    # nodes = [-(max(children[-1]) + 1)]
+    # for i in xrange(n_clusters - 1):
+    #     print(nodes)
+    #     # As we have a heap, nodes[0] is the smallest element
+    #     these_children = children[-nodes[0] - n_leaves]
+    #     # Insert the 2 children and remove the largest node
+    #     heappush(nodes, -these_children[0])
+    #     heappushpop(nodes, -these_children[1])
+    # label = np.zeros(n_leaves, dtype=np.intp)
+    # for i, node in enumerate(nodes):
+    #     label[_hierarchical._hc_get_descendent(-node, children, n_leaves)] = i
+    # return label
+
     nodes = [-(max(children[-1]) + 1)]
-    for i in xrange(n_clusters - 1):
+    for i in xrange(n_leaves - 2, 1, -1):
+        if distance[i] < CLUSSTER_THREHOLD: break
         # As we have a heap, nodes[0] is the smallest element
         these_children = children[-nodes[0] - n_leaves]
         # Insert the 2 children and remove the largest node
@@ -649,8 +661,7 @@ def _hc_cut(n_clusters, children, n_leaves):
     label = np.zeros(n_leaves, dtype=np.intp)
     for i, node in enumerate(nodes):
         label[_hierarchical._hc_get_descendent(-node, children, n_leaves)] = i
-    return label
-
+    return label, i
 
 ###############################################################################
 
@@ -825,20 +836,24 @@ class AgglomerativeClustering(BaseEstimator, ClusterMixin):
         if self.linkage != 'ward':
             kwargs['linkage'] = self.linkage
             kwargs['affinity'] = self.affinity
-        self.children_, self.n_components_, self.n_leaves_, parents = \
+        out, self.n_components_, self.n_leaves_, parents = \
             memory.cache(tree_builder)(X, connectivity,
                                        n_clusters=n_clusters,
                                        **kwargs)
         # Cut the tree
+        self.children_ = out[:, :2].astype(np.int)
+        distances = out[:, 2]
+
         if compute_full_tree:
-            self.labels_ = _hc_cut(self.n_clusters, self.children_,
-                                   self.n_leaves_)
+            self.labels_, self.n_clusters = _hc_cut(self.n_clusters, self.children_,
+                                   self.n_leaves_, distance=distances)
         else:
             labels = _hierarchical.hc_get_heads(parents, copy=False)
             # copy to avoid holding a reference on the original array
             labels = np.copy(labels[:n_samples])
             # Reassign cluster numbers
             self.labels_ = np.searchsorted(np.unique(labels), labels)
+        
         return self
 
 
@@ -966,4 +981,4 @@ class FeatureAgglomeration(AgglomerativeClustering, AgglomerationTransform):
 
     @property
     def fit_predict(self):
-        raise AttributeError
+        ra
